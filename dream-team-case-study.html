@@ -27,7 +27,8 @@ body {
   font-size: 13px;
   line-height: 1.75;
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 /* ── Layout ── */
@@ -603,15 +604,12 @@ a:hover { text-decoration: underline; }
             <iframe
               src="https://studiodavidpreli.github.io/cue-mapper"
               id="cs-cue-mapper"
-              allow="autoplay"
+              allow="autoplay; microphone; camera; fullscreen"
+              referrerpolicy="no-referrer-when-downgrade"
               title="Audio Cue Mapper tool"
               style="height: 420px; max-height: 900px;"></iframe>
           </div>
 
-          <div class="asset-slot" style="margin:12px 0; padding:20px;">
-            IMAGE PLACEHOLDER
-            <div class="asset-label">After Effects timeline &mdash; marker null layers from JSX export</div>
-          </div>
         </div>
       </div>
 
@@ -709,7 +707,13 @@ a:hover { text-decoration: underline; }
 
 <script>
 function reportHeight() {
-  window.parent.postMessage({ type: 'resize', height: document.body.scrollHeight }, '*');
+  var h = Math.max(
+    document.body.scrollHeight,
+    document.body.offsetHeight,
+    document.documentElement.scrollHeight,
+    document.documentElement.offsetHeight
+  );
+  window.parent.postMessage({ type: 'resize', height: h }, '*');
 }
 
 window.addEventListener('message', function(e) {
@@ -724,8 +728,10 @@ window.addEventListener('message', function(e) {
 
 reportHeight();
 window.addEventListener('load', reportHeight);
-setTimeout(reportHeight, 1000);
-setTimeout(reportHeight, 3000);
+setTimeout(reportHeight, 500);
+setTimeout(reportHeight, 1500);
+setTimeout(reportHeight, 4000);
+setTimeout(reportHeight, 8000);
 </script>
 <script src="https://player.vimeo.com/api/player.js"></script>
 </body>
