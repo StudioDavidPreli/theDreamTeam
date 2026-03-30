@@ -27,6 +27,7 @@ body {
   font-size: 13px;
   line-height: 1.75;
   padding: 0;
+  overflow: hidden;
 }
 
 /* ── Layout ── */
@@ -707,7 +708,10 @@ a:hover { text-decoration: underline; }
 </div>
 
 <script>
-// postMessage height reporting for Cargo iframe + Cue Mapper
+function reportHeight() {
+  window.parent.postMessage({ type: 'resize', height: document.body.scrollHeight }, '*');
+}
+
 window.addEventListener('message', function(e) {
   if (e.data && e.data.type === 'resize') {
     var f = document.getElementById('cs-cue-mapper');
@@ -717,10 +721,11 @@ window.addEventListener('message', function(e) {
     }
   }
 });
-window.parent.postMessage({ type: 'resize', height: document.body.scrollHeight }, '*');
-window.addEventListener('load', function() {
-  window.parent.postMessage({ type: 'resize', height: document.body.scrollHeight }, '*');
-});
+
+reportHeight();
+window.addEventListener('load', reportHeight);
+setTimeout(reportHeight, 1000);
+setTimeout(reportHeight, 3000);
 </script>
 <script src="https://player.vimeo.com/api/player.js"></script>
 </body>
