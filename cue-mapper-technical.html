@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audio Cue Mapper — Technical Case Study</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #141414;
+  --panel:   #1e1e1e;
+  --panel2:  #262626;
+  --border:  #2e2e2e;
+  --border2: #3d3d3d;
+  --accent:  #76c17d;
+  --accent2: #b9b0ff;
+  --accent3: #e8b86d;
+  --text:    #e1e1e1;
+  --muted:   #888888;
+  --muted2:  #aaaaaa;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+/* ── Layout ── */
+.page { max-width: 860px; margin: 0 auto; padding: 56px 28px 80px; }
+
+/* ── Header ── */
+.cs-header {
+  margin-bottom: 56px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 32px;
+}
+
+.cs-eyebrow {
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.cs-title {
+  font-family: 'DM Serif Display', serif;
+  font-style: italic;
+  font-size: clamp(32px, 6vw, 56px);
+  color: var(--accent);
+  line-height: 1.05;
+  letter-spacing: -0.5px;
+  margin-bottom: 10px;
+}
+
+.cs-subtitle {
+  font-size: 13px;
+  color: var(--muted2);
+  margin-bottom: 24px;
+}
+
+.cs-meta {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.cs-meta-item { display: flex; flex-direction: column; gap: 3px; }
+.cs-meta-label { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.cs-meta-value { font-size: 12px; color: var(--text); }
+
+/* ── Nav ── */
+.toc {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 20px 24px;
+  margin-bottom: 56px;
+}
+
+.toc-label {
+  font-size: 8px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.toc-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.toc-list li { display: flex; align-items: baseline; gap: 10px; }
+
+.toc-list a {
+  font-size: 12px;
+  color: var(--muted2);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.toc-list a:hover { color: var(--accent); }
+
+.toc-num {
+  font-size: 9px;
+  color: var(--muted);
+  min-width: 20px;
+}
+
+/* ── Section label ── */
+.sec-label {
+  font-size: 8px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sec-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.sec-num { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 11px; color: var(--accent); margin-right: 4px; }
+
+/* ── Headings ── */
+h2 {
+  font-family: 'DM Serif Display', serif;
+  font-style: italic;
+  font-size: 24px;
+  color: var(--text);
+  letter-spacing: -0.3px;
+  margin-bottom: 14px;
+  line-height: 1.2;
+}
+
+h3 {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+  margin-top: 28px;
+}
+
+/* ── Body ── */
+p { margin-bottom: 14px; color: var(--text); font-size: 13px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Sections ── */
+.section { margin-bottom: 60px; }
+
+/* ── Tables ── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0 28px;
+  font-size: 12px;
+}
+
+.data-table th {
+  background: var(--panel2);
+  color: var(--muted2);
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  text-align: left;
+  border: 1px solid var(--border2);
+}
+
+.data-table td {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  color: var(--muted2);
+  vertical-align: top;
+  line-height: 1.55;
+}
+
+.data-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+
+/* Tier label cells */
+.tier-1 { background: rgba(118,193,125,0.15) !important; color: var(--accent) !important; font-weight: 700; }
+.tier-2 { background: rgba(185,176,255,0.15) !important; color: var(--accent2) !important; font-weight: 700; }
+.tier-3 { background: rgba(232,184,109,0.15) !important; color: var(--accent3) !important; font-weight: 700; }
+.tier-hd { background: var(--panel2) !important; }
+
+/* Layer table */
+.layer-beat   { background: rgba(156,214,184,0.12) !important; color: #9cd6b8 !important; font-weight: 700; }
+.layer-sec    { background: rgba(245,224,122,0.12) !important; color: #f5e07a !important; font-weight: 700; }
+.layer-major  { background: rgba(245,168,122,0.12) !important; color: #f5a87a !important; font-weight: 700; }
+.layer-mid    { background: rgba(196,188,255,0.12) !important; color: #c4bcff !important; font-weight: 700; }
+.layer-minor  { background: rgba(245,212,154,0.12) !important; color: #f5d49a !important; font-weight: 700; }
+
+/* ── Code/mono inline ── */
+code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--accent3);
+  background: var(--panel);
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+}
+
+/* ── Bullet list ── */
+ul.cs-list {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+ul.cs-list li {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted2);
+  line-height: 1.6;
+}
+
+ul.cs-list li::before {
+  content: '\2013';
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+ol.cs-list {
+  list-style: none;
+  counter-reset: cs-counter;
+  margin: 0 0 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+ol.cs-list li {
+  counter-increment: cs-counter;
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted2);
+  line-height: 1.6;
+}
+
+ol.cs-list li::before {
+  content: counter(cs-counter) '.';
+  color: var(--accent);
+  flex-shrink: 0;
+  font-size: 11px;
+  margin-top: 2px;
+  min-width: 16px;
+}
+
+/* ── Tool embed ── */
+.tool-embed {
+  margin: 28px 0;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.tool-embed-label {
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 16px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool-embed-label::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.tool-embed iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+  height: 420px;
+  max-height: 900px;
+}
+
+/* ── Pill tags ── */
+.pills { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 20px; }
+
+.pill {
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 2px;
+  padding: 3px 9px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted2);
+}
+
+/* ── Footer ── */
+.cs-footer {
+  margin-top: 72px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cs-footer p { font-size: 10px; color: var(--muted); margin: 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── HEADER ── -->
+  <header class="cs-header">
+    <div class="cs-eyebrow">Technical Case Study &mdash; Studio David Preli &mdash; 2026</div>
+    <h1 class="cs-title">Audio Cue Mapper</h1>
+    <p class="cs-subtitle">Browser-based audio analysis tool for motion design sync workflows</p>
+    <div class="cs-meta">
+      <div class="cs-meta-item">
+        <span class="cs-meta-label">Runtime</span>
+        <span class="cs-meta-value">Vanilla JS &mdash; no dependencies</span>
+      </div>
+      <div class="cs-meta-item">
+        <span class="cs-meta-label">Hosting</span>
+        <span class="cs-meta-value">GitHub Pages</span>
+      </div>
+      <div class="cs-meta-item">
+        <span class="cs-meta-label">Export</span>
+        <span class="cs-meta-value">CSV &mdash; JSON &mdash; AE .jsx</span>
+      </div>
+      <div class="cs-meta-item">
+        <span class="cs-meta-label">Year</span>
+        <span class="cs-meta-value">2026</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── TOC ── -->
+  <nav class="toc">
+    <div class="toc-label">Contents</div>
+    <ul class="toc-list">
+      <li><span class="toc-num">01</span><a href="#overview">Overview</a></li>
+      <li><span class="toc-num">02</span><a href="#architecture">System architecture</a></li>
+      <li><span class="toc-num">03</span><a href="#pipeline">Audio analysis pipeline</a></li>
+      <li><span class="toc-num">04</span><a href="#visualisation">Visualisation</a></li>
+      <li><span class="toc-num">05</span><a href="#export">After Effects export</a></li>
+      <li><span class="toc-num">06</span><a href="#design">Design</a></li>
+      <li><span class="toc-num">07</span><a href="#limitations">Limitations</a></li>
+    </ul>
+  </nav>
+
+  <!-- ── 01 OVERVIEW ── -->
+  <section class="section" id="overview">
+    <div class="sec-label"><span class="sec-num">01</span>Overview</div>
+    <h2>What it does</h2>
+    <p>Audio Cue Mapper is a browser-based tool that analyses an audio file and produces a structured set of visual cues for use in After Effects. Drop in any standard audio or video file. The tool performs all signal processing locally in the browser, renders an interactive waveform and tiered cue map, and exports an After Effects ExtendScript file that populates the composition timeline with automatically generated marker layers.</p>
+    <p>The tool was built to support <a href="./dream-team-case-study.html">The Dream Team</a> &mdash; a pixel-art animation synced to a music track by Fievel Is Glauque &mdash; where existing beat-detection tools were unsuitable for the loose, live-recorded character of the source material. No data is uploaded anywhere. No server is involved at any stage.</p>
+
+    <div class="tool-embed">
+      <div class="tool-embed-label">Live tool</div>
+      <iframe
+        src="https://studiodavidpreli.github.io/cue-mapper"
+        id="tech-cue-mapper"
+        allow="autoplay"
+        title="Audio Cue Mapper"></iframe>
+    </div>
+  </section>
+
+  <!-- ── 02 ARCHITECTURE ── -->
+  <section class="section" id="architecture">
+    <div class="sec-label"><span class="sec-num">02</span>System architecture</div>
+    <h2>A single self-contained file</h2>
+    <p>The entire application is one HTML file. All analysis, rendering, and export logic runs client-side. There are no external dependencies, no build step, no npm, no framework, and no backend.</p>
+
+    <h3>Deployment stack</h3>
+    <table class="data-table">
+      <thead><tr><th>Layer</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td>Hosting</td><td>GitHub Pages &mdash; static file, zero infrastructure</td></tr>
+        <tr><td>Embedding</td><td>Cargo 3 iframe with <code>postMessage</code> resize bridge</td></tr>
+        <tr><td>Runtime</td><td>Vanilla JS, Web Audio API, Canvas 2D API</td></tr>
+        <tr><td>Fonts</td><td>IBM Plex Mono + DM Serif Display via Google Fonts</td></tr>
+        <tr><td>Dependencies</td><td>None</td></tr>
+      </tbody>
+    </table>
+
+    <h3>iframe communication</h3>
+    <p>Because Cargo 3 has no server-side scripting and limited <code>&lt;head&gt;</code> access, the tool is hosted externally and embedded. After analysis completes, the tool calls <code>window.parent.postMessage()</code> with the new document height. The parent page listens and resizes the iframe accordingly, preventing content clipping.</p>
+  </section>
+
+  <!-- ── 03 PIPELINE ── -->
+  <section class="section" id="pipeline">
+    <div class="sec-label"><span class="sec-num">03</span>Audio analysis pipeline</div>
+    <h2>Seven processing stages</h2>
+    <p>When a file is dropped or selected, the browser reads it as an <code>ArrayBuffer</code> and passes it through seven sequential stages. All computation runs on the main thread, broken into yielding chunks via <code>setTimeout(r, 0)</code> so the UI remains responsive during analysis.</p>
+
+    <div class="pills">
+      <span class="pill">Web Audio API</span>
+      <span class="pill">FFT</span>
+      <span class="pill">Spectral flux</span>
+      <span class="pill">RMS envelope</span>
+      <span class="pill">Autocorrelation</span>
+    </div>
+
+    <h3>2.1 &mdash; Decoding</h3>
+    <p>The raw <code>ArrayBuffer</code> is decoded using the Web Audio API's <code>decodeAudioData()</code>, which handles MP3, WAV, FLAC, OGG, AAC, and M4A natively in the browser. The decoded <code>AudioBuffer</code> is immediately mixed to mono by averaging the left and right channel sample arrays. Mono mixing halves the processing load and is standard practice for onset detection, which does not benefit from stereo information.</p>
+
+    <h3>2.2 &mdash; Waveform downsampling</h3>
+    <p>The mono sample array (typically 4&ndash;8 million samples for a 90-second track at 44.1kHz) is downsampled to 1,200 min/max pairs for display. Each pair captures the peak positive and peak negative sample within a window, producing the filled waveform shape characteristic of audio editors. This representation is visual only and plays no part in the analysis.</p>
+
+    <h3>2.3 &mdash; Spectral flux onset detection</h3>
+    <p>Onset detection is the core of the analysis. The algorithm steps through the audio in overlapping frames:</p>
+    <table class="data-table">
+      <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Frame size</td><td>2048 samples</td></tr>
+        <tr><td>Hop size</td><td>512 samples (~11.6ms at 44.1kHz)</td></tr>
+        <tr><td>Window function</td><td>Hanning &mdash; reduces spectral leakage at frame edges</td></tr>
+        <tr><td>Transform</td><td>Cooley&ndash;Tukey radix-2 FFT, implemented from scratch in JS</td></tr>
+      </tbody>
+    </table>
+    <p>For each frame the algorithm computes the positive difference between the current magnitude spectrum and the previous frame's spectrum &mdash; this is spectral flux. A spike in flux indicates new frequency energy entering the signal: a drum hit, a chord onset, a melodic phrase beginning. The flux values form a continuous time series across the track duration.</p>
+
+    <h3>2.4 &mdash; Peak picking and tiering</h3>
+    <p>The flux array is lightly smoothed and local maxima above the 85th percentile are identified, with a minimum distance constraint between picks to prevent double-triggering. Peaks are tiered by strength relative to the global maximum:</p>
+    <table class="data-table">
+      <thead>
+        <tr><th class="tier-hd">Tier</th><th class="tier-hd">Threshold</th><th class="tier-hd">Use</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="tier-1">1 &mdash; Major</td><td>&ge;72% of max</td><td>Strongest hits. Key poses, cuts, major transitions.</td></tr>
+        <tr><td class="tier-2">2 &mdash; Mid</td><td>48&ndash;72%</td><td>Mid-level onsets. Secondary accents, phrase markers.</td></tr>
+        <tr><td class="tier-3">3 &mdash; Minor</td><td>&lt;48%</td><td>Subtle onsets. Texture, micro-timing, detail passes.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2.5 &mdash; RMS envelope</h3>
+    <p>Root mean square energy is computed per frame, giving a measure of perceived loudness over time. The RMS array is used for waveform background shading and for structural segmentation.</p>
+
+    <h3>2.6 &mdash; Structural segmentation</h3>
+    <p>The RMS envelope is heavily smoothed over a two-second window and local minima are identified. These represent moments where the music breathes between phrases. The five deepest minima become section boundaries, dividing the track into up to six structural sections. This is a heuristic &mdash; it works well for music with clear phrase structure and less well for continuous or through-composed material.</p>
+
+    <h3>2.7 &mdash; Tempo estimation</h3>
+    <p>Autocorrelation is performed on the spectral flux signal across a range of lags corresponding to 50&ndash;240 BPM. The lag with the highest correlation coefficient corresponds to the beat period, folded into a musically sensible range (60&ndash;200 BPM). This estimate drives the beat grid export and is approximate &mdash; for tracks with irregular pulse the grid should be treated as a starting reference.</p>
+  </section>
+
+  <!-- ── 04 VISUALISATION ── -->
+  <section class="section" id="visualisation">
+    <div class="sec-label"><span class="sec-num">04</span>Visualisation</div>
+    <h2>Two canvas panels</h2>
+    <p>Results are rendered to two HTML <code>&lt;canvas&gt;</code> elements using the Canvas 2D API. Both use device pixel ratio scaling to render crisply on high-DPI displays and resize responsively on window resize events.</p>
+
+    <h3>Waveform</h3>
+    <p>The 1,200-point min/max array is drawn as a filled polygon &mdash; the top edge traces positive peaks, the bottom edge traces negative peaks in reverse, closed and filled with a gradient. Section boundaries overlay as dashed vertical lines.</p>
+
+    <h3>Cue map</h3>
+    <p>Three tiers of peaks are drawn as vertical bar elements centred on the canvas midpoint, scaled by strength:</p>
+    <ul class="cs-list">
+      <li>Tier 1 (Major) &mdash; tall green bars with glow and capped endpoints</li>
+      <li>Tier 2 (Mid) &mdash; medium periwinkle bars</li>
+      <li>Tier 3 (Minor) &mdash; short amber bars anchored to the canvas bottom</li>
+    </ul>
+    <p>Section boundaries appear as dashed green vertical lines with section index labels. A 5-second grid provides temporal orientation. Hovering shows a tooltip with the nearest peak's timecode, tier, and strength percentage.</p>
+  </section>
+
+  <!-- ── 05 EXPORT ── -->
+  <section class="section" id="export">
+    <div class="sec-label"><span class="sec-num">05</span>After Effects export</div>
+    <h2>Five null layers, one JSX script</h2>
+    <p>The primary deliverable is a <code>.jsx</code> ExtendScript file. Run in After Effects via File &rsaquo; Scripts &rsaquo; Run Script File, it creates five null layers in the active composition, each carrying a specific category of markers.</p>
+
+    <table class="data-table">
+      <thead><tr><th>Layer</th><th>AE label</th><th>Contents</th></tr></thead>
+      <tbody>
+        <tr><td class="layer-beat">&#9834; Beat grid</td><td>Sea Foam</td><td>Every beat at estimated BPM. Downbeats labelled M1, M2&hellip; Off-beats as 1.2, 1.3, 1.4.</td></tr>
+        <tr><td class="layer-sec">&sect; Sections</td><td>Yellow</td><td>One marker per structural boundary with section index and timecode.</td></tr>
+        <tr><td class="layer-major">&#9650; Major hits</td><td>Tangerine</td><td>Tier 1 peaks. Timecode and strength percentage.</td></tr>
+        <tr><td class="layer-mid">&#9679; Mid hits</td><td>Aqua</td><td>Tier 2 peaks. Timecode and strength percentage.</td></tr>
+        <tr><td class="layer-minor">&middot; Minor hits</td><td>Lavender</td><td>Tier 3 onsets. Timecode and strength percentage.</td></tr>
+      </tbody>
+    </table>
+
+    <p>Layers are added in reverse order so the beat grid sits at the top of the layer stack. All markers are placed using <code>MarkerValue</code> objects and <code>setValueAtTime()</code> &mdash; the standard ExtendScript API for composition markers. After Effects snaps keyframes and layer in/out points to composition markers when Shift is held while dragging, making the marker layers directly usable as a snap grid.</p>
+
+    <h3>Suggested workflow</h3>
+    <ol class="cs-list">
+      <li>Solo the Sections layer to block the large-scale structure</li>
+      <li>Solo Major Hits to place key poses and primary cuts</li>
+      <li>Use Beat Grid to time secondary animation and transitions</li>
+      <li>Reference Mid and Minor layers for texture and micro-timing</li>
+    </ol>
+  </section>
+
+  <!-- ── 06 DESIGN ── -->
+  <section class="section" id="design">
+    <div class="sec-label"><span class="sec-num">06</span>Design</div>
+    <h2>Visual language</h2>
+    <p>The tool shares a design language with the Pok&eacute;dex viewer and Dream Team case study on the same portfolio site, creating coherence across all embedded tools.</p>
+
+    <h3>Colour palette</h3>
+    <table class="data-table">
+      <thead><tr><th>Token</th><th>Hex</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td><code>--bg</code></td><td>#141414</td><td>Page background &mdash; matches Pok&eacute;dex viewer canvas</td></tr>
+        <tr><td><code>--accent</code></td><td style="color:var(--accent)">#76c17d</td><td>Primary / Tier 1 &mdash; Pok&eacute;dex green</td></tr>
+        <tr><td><code>--accent2</code></td><td style="color:var(--accent2)">#b9b0ff</td><td>Tier 2 &mdash; periwinkle</td></tr>
+        <tr><td><code>--accent3</code></td><td style="color:var(--accent3)">#e8b86d</td><td>Tier 3 / beat grid &mdash; warm amber</td></tr>
+        <tr><td><code>--text</code></td><td>#e1e1e1</td><td>Primary text &mdash; 12:1 contrast on --bg (WCAG AAA)</td></tr>
+        <tr><td><code>--muted</code></td><td>#888888</td><td>Secondary text &mdash; 4.6:1 contrast (WCAG AA)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Typography</h3>
+    <p>IBM Plex Mono throughout, matching the portfolio site's typographic system. DM Serif Display italic for the track title and upload prompt &mdash; a tonal counterpoint to the monospace grid.</p>
+
+    <h3>Loading animation</h3>
+    <p>During analysis a quarter note hops along a five-line staff via CSS keyframe animation. Ghost notes trail behind on the staff lines. The animation is entirely CSS &mdash; no JavaScript, no canvas &mdash; and uses the same CSS variable palette as the rest of the interface.</p>
+  </section>
+
+  <!-- ── 07 LIMITATIONS ── -->
+  <section class="section" id="limitations">
+    <div class="sec-label"><span class="sec-num">07</span>Limitations</div>
+    <h2>Known constraints</h2>
+    <ul class="cs-list">
+      <li><strong>Tempo estimation is approximate.</strong> Music with irregular pulse, significant rubato, or complex polyrhythm will produce a beat grid that diverges from the actual pulse. Treat the grid as a starting reference.</li>
+      <li><strong>Segmentation is heuristic.</strong> The RMS-valley approach works well for music with clear phrase structure. Continuous or through-composed material may produce fewer or less meaningful section boundaries.</li>
+      <li><strong>The FFT is unoptimised.</strong> The Cooley&ndash;Tukey implementation is correct but not performance-tuned &mdash; analysis of files longer than ten minutes may be slow on lower-powered devices.</li>
+      <li><strong>Codec support varies.</strong> <code>decodeAudioData()</code> does not support all container/codec variants. Some MP4 files with unusual audio encoding may fail to decode. WAV and FLAC are the most reliable formats.</li>
+      <li><strong>Markers land on null layers.</strong> Markers are placed on null layers, not on the audio layer itself. Snapping works identically, but the visual association between waveform and markers requires manual layer management.</li>
+    </ul>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <footer class="cs-footer">
+    <p>Studio David Preli &mdash; <a href="https://davidpreli.com">davidpreli.com</a></p>
+    <p>Built for <a href="./dream-team-case-study.html">The Dream Team</a> &mdash; 2026</p>
+  </footer>
+
+</div>
+
+<script>
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'resize') {
+    var f = document.getElementById('tech-cue-mapper');
+    if (f) {
+      var h = Math.max(420, Math.min(e.data.height + 20, 900));
+      f.style.height = h + 'px';
+    }
+  }
+});
+window.parent.postMessage({ type: 'resize', height: document.body.scrollHeight }, '*');
+window.addEventListener('load', function() {
+  window.parent.postMessage({ type: 'resize', height: document.body.scrollHeight }, '*');
+});
+</script>
+</body>
+</html>
