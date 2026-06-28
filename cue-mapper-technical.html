@@ -379,7 +379,7 @@ ol.cs-list li::before {
     <div class="sec-label"><span class="sec-num">01</span>Overview</div>
     <h2>What it does</h2>
     <p>Audio Cue Mapper is a browser-based tool that analyses an audio file and produces a structured set of visual cues for use in After Effects. Drop in any standard audio or video file. The tool performs all signal processing locally in the browser, renders an interactive waveform and tiered cue map, and exports an After Effects ExtendScript file that populates the composition timeline with automatically generated marker layers.</p>
-    <p>The tool was built to support <a href="./dream-team-case-study.html">The Dream Team</a> &mdash; a pixel-art animation synced to a music track by Fievel Is Glauque &mdash; where existing beat-detection tools were unsuitable for the loose, live-recorded character of the source material. No data is uploaded anywhere. No server is involved at any stage.</p>
+    <p>The tool was built to support <a href="./dream-team-case-study.html">The Dream Team</a> (a pixel-art animation synced to a music track by Fievel Is Glauque), where existing beat-detection tools were unsuitable for the loose, live-recorded character of the source material. No data is uploaded anywhere. No server is involved at any stage.</p>
 
     <div class="tool-embed">
       <div class="tool-embed-label">Live tool</div>
@@ -402,7 +402,7 @@ ol.cs-list li::before {
       <thead><tr><th>Layer</th><th>Detail</th></tr></thead>
       <tbody>
         <tr><td>Hosting</td><td>GitHub Pages &mdash; static file, zero infrastructure</td></tr>
-        <tr><td>Embedding</td><td>Cargo 3 iframe with <code>postMessage</code> resize bridge</td></tr>
+        <tr><td>Embedding</td><td>Cross-origin iframe in the Astro site, <code>postMessage</code> resize bridge</td></tr>
         <tr><td>Runtime</td><td>Vanilla JS, Web Audio API, Canvas 2D API</td></tr>
         <tr><td>Fonts</td><td>IBM Plex Mono + DM Serif Display via Google Fonts</td></tr>
         <tr><td>Dependencies</td><td>None</td></tr>
@@ -410,7 +410,7 @@ ol.cs-list li::before {
     </table>
 
     <h3>iframe communication</h3>
-    <p>Because Cargo 3 has no server-side scripting and limited <code>&lt;head&gt;</code> access, the tool is hosted externally and embedded. After analysis completes, the tool calls <code>window.parent.postMessage()</code> with the new document height. The parent page listens and resizes the iframe accordingly, preventing content clipping.</p>
+    <p>The tool is a self-contained file hosted on GitHub Pages and embedded cross-origin in the Astro portfolio, the same iframe isolation the site uses for its other live tools. After analysis completes, the tool calls <code>window.parent.postMessage()</code> with the new document height. The parent page listens and resizes the iframe accordingly, preventing content clipping.</p>
   </section>
 
   <!-- ── 03 PIPELINE ── -->
@@ -444,7 +444,7 @@ ol.cs-list li::before {
         <tr><td>Transform</td><td>Cooley&ndash;Tukey radix-2 FFT, implemented from scratch in JS</td></tr>
       </tbody>
     </table>
-    <p>For each frame the algorithm computes the positive difference between the current magnitude spectrum and the previous frame's spectrum &mdash; this is spectral flux. A spike in flux indicates new frequency energy entering the signal: a drum hit, a chord onset, a melodic phrase beginning. The flux values form a continuous time series across the track duration.</p>
+    <p>For each frame the algorithm computes the positive difference between the current magnitude spectrum and the previous frame's spectrum: this is spectral flux. A spike in flux indicates new frequency energy entering the signal: a drum hit, a chord onset, a melodic phrase beginning. The flux values form a continuous time series across the track duration.</p>
 
     <h3>2.4 &mdash; Peak picking and tiering</h3>
     <p>The flux array is lightly smoothed and local maxima above the 85th percentile are identified, with a minimum distance constraint between picks to prevent double-triggering. Peaks are tiered by strength relative to the global maximum:</p>
@@ -463,10 +463,10 @@ ol.cs-list li::before {
     <p>Root mean square energy is computed per frame, giving a measure of perceived loudness over time. The RMS array is used for waveform background shading and for structural segmentation.</p>
 
     <h3>2.6 &mdash; Structural segmentation</h3>
-    <p>The RMS envelope is heavily smoothed over a two-second window and local minima are identified. These represent moments where the music breathes between phrases. The five deepest minima become section boundaries, dividing the track into up to six structural sections. This is a heuristic &mdash; it works well for music with clear phrase structure and less well for continuous or through-composed material.</p>
+    <p>The RMS envelope is heavily smoothed over a two-second window and local minima are identified. These represent moments where the music breathes between phrases. The five deepest minima become section boundaries, dividing the track into up to six structural sections. This is a heuristic: it works well for music with clear phrase structure and less well for continuous or through-composed material.</p>
 
     <h3>2.7 &mdash; Tempo estimation</h3>
-    <p>Autocorrelation is performed on the spectral flux signal across a range of lags corresponding to 50&ndash;240 BPM. The lag with the highest correlation coefficient corresponds to the beat period, folded into a musically sensible range (60&ndash;200 BPM). This estimate drives the beat grid export and is approximate &mdash; for tracks with irregular pulse the grid should be treated as a starting reference.</p>
+    <p>Autocorrelation is performed on the spectral flux signal across a range of lags corresponding to 50&ndash;240 BPM. The lag with the highest correlation coefficient corresponds to the beat period, folded into a musically sensible range (60&ndash;200 BPM). This estimate drives the beat grid export and is approximate. For tracks with irregular pulse the grid should be treated as a starting reference.</p>
   </section>
 
   <!-- ── 04 VISUALISATION ── -->
@@ -476,14 +476,14 @@ ol.cs-list li::before {
     <p>Results are rendered to two HTML <code>&lt;canvas&gt;</code> elements using the Canvas 2D API. Both use device pixel ratio scaling to render crisply on high-DPI displays and resize responsively on window resize events.</p>
 
     <h3>Waveform</h3>
-    <p>The 1,200-point min/max array is drawn as a filled polygon &mdash; the top edge traces positive peaks, the bottom edge traces negative peaks in reverse, closed and filled with a gradient. Section boundaries overlay as dashed vertical lines.</p>
+    <p>The 1,200-point min/max array is drawn as a filled polygon: the top edge traces positive peaks, the bottom edge traces negative peaks in reverse, closed and filled with a gradient. Section boundaries overlay as dashed vertical lines.</p>
 
     <h3>Cue map</h3>
     <p>Three tiers of peaks are drawn as vertical bar elements centred on the canvas midpoint, scaled by strength:</p>
     <ul class="cs-list">
-      <li>Tier 1 (Major) &mdash; tall green bars with glow and capped endpoints</li>
-      <li>Tier 2 (Mid) &mdash; medium periwinkle bars</li>
-      <li>Tier 3 (Minor) &mdash; short amber bars anchored to the canvas bottom</li>
+      <li>Tier 1 (Major): tall green bars with glow and capped endpoints</li>
+      <li>Tier 2 (Mid): medium periwinkle bars</li>
+      <li>Tier 3 (Minor): short amber bars anchored to the canvas bottom</li>
     </ul>
     <p>Section boundaries appear as dashed green vertical lines with section index labels. A 5-second grid provides temporal orientation. Hovering shows a tooltip with the nearest peak's timecode, tier, and strength percentage.</p>
   </section>
@@ -505,7 +505,7 @@ ol.cs-list li::before {
       </tbody>
     </table>
 
-    <p>Layers are added in reverse order so the beat grid sits at the top of the layer stack. All markers are placed using <code>MarkerValue</code> objects and <code>setValueAtTime()</code> &mdash; the standard ExtendScript API for composition markers. After Effects snaps keyframes and layer in/out points to composition markers when Shift is held while dragging, making the marker layers directly usable as a snap grid.</p>
+    <p>Layers are added in reverse order so the beat grid sits at the top of the layer stack. All markers are placed using <code>MarkerValue</code> objects and <code>setValueAtTime()</code>, the standard ExtendScript API for composition markers. After Effects snaps keyframes and layer in/out points to composition markers when Shift is held while dragging, making the marker layers directly usable as a snap grid.</p>
 
     <h3>Suggested workflow</h3>
     <ol class="cs-list">
@@ -536,10 +536,10 @@ ol.cs-list li::before {
     </table>
 
     <h3>Typography</h3>
-    <p>IBM Plex Mono throughout, matching the portfolio site's typographic system. DM Serif Display italic for the track title and upload prompt &mdash; a tonal counterpoint to the monospace grid.</p>
+    <p>IBM Plex Mono throughout, matching the portfolio site's typographic system. DM Serif Display italic for the track title and upload prompt, a tonal counterpoint to the monospace grid.</p>
 
     <h3>Loading animation</h3>
-    <p>During analysis a quarter note hops along a five-line staff via CSS keyframe animation. Ghost notes trail behind on the staff lines. The animation is entirely CSS &mdash; no JavaScript, no canvas &mdash; and uses the same CSS variable palette as the rest of the interface.</p>
+    <p>During analysis a quarter note hops along a five-line staff via CSS keyframe animation. Ghost notes trail behind on the staff lines. The animation is entirely CSS (no JavaScript, no canvas) and uses the same CSS variable palette as the rest of the interface.</p>
   </section>
 
   <!-- ── 07 LIMITATIONS ── -->
@@ -549,7 +549,7 @@ ol.cs-list li::before {
     <ul class="cs-list">
       <li><strong>Tempo estimation is approximate.</strong> Music with irregular pulse, significant rubato, or complex polyrhythm will produce a beat grid that diverges from the actual pulse. Treat the grid as a starting reference.</li>
       <li><strong>Segmentation is heuristic.</strong> The RMS-valley approach works well for music with clear phrase structure. Continuous or through-composed material may produce fewer or less meaningful section boundaries.</li>
-      <li><strong>The FFT is unoptimised.</strong> The Cooley&ndash;Tukey implementation is correct but not performance-tuned &mdash; analysis of files longer than ten minutes may be slow on lower-powered devices.</li>
+      <li><strong>The FFT is unoptimised.</strong> The Cooley&ndash;Tukey implementation is correct but not performance-tuned. Analysis of files longer than ten minutes may be slow on lower-powered devices.</li>
       <li><strong>Codec support varies.</strong> <code>decodeAudioData()</code> does not support all container/codec variants. Some MP4 files with unusual audio encoding may fail to decode. WAV and FLAC are the most reliable formats.</li>
       <li><strong>Markers land on null layers.</strong> Markers are placed on null layers, not on the audio layer itself. Snapping works identically, but the visual association between waveform and markers requires manual layer management.</li>
     </ul>
