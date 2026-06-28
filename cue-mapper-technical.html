@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Audio Cue Mapper — Technical Case Study</title>
+<title>Audio Cue Mapper · Technical Case Study</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -337,13 +337,13 @@ ol.cs-list li::before {
 
   <!-- ── HEADER ── -->
   <header class="cs-header">
-    <div class="cs-eyebrow">Technical Case Study &mdash; Studio David Preli &mdash; 2026</div>
+    <div class="cs-eyebrow">Technical Case Study &middot; Studio David Preli &middot; 2026</div>
     <h1 class="cs-title">Audio Cue Mapper</h1>
     <p class="cs-subtitle">Browser-based audio analysis tool for motion design sync workflows</p>
     <div class="cs-meta">
       <div class="cs-meta-item">
         <span class="cs-meta-label">Runtime</span>
-        <span class="cs-meta-value">Vanilla JS &mdash; no dependencies</span>
+        <span class="cs-meta-value">Vanilla JS &middot; no dependencies</span>
       </div>
       <div class="cs-meta-item">
         <span class="cs-meta-label">Hosting</span>
@@ -351,7 +351,7 @@ ol.cs-list li::before {
       </div>
       <div class="cs-meta-item">
         <span class="cs-meta-label">Export</span>
-        <span class="cs-meta-value">CSV &mdash; JSON &mdash; AE .jsx</span>
+        <span class="cs-meta-value">CSV &middot; JSON &middot; AE .jsx</span>
       </div>
       <div class="cs-meta-item">
         <span class="cs-meta-label">Year</span>
@@ -401,7 +401,7 @@ ol.cs-list li::before {
     <table class="data-table">
       <thead><tr><th>Layer</th><th>Detail</th></tr></thead>
       <tbody>
-        <tr><td>Hosting</td><td>GitHub Pages &mdash; static file, zero infrastructure</td></tr>
+        <tr><td>Hosting</td><td>GitHub Pages: static file, zero infrastructure</td></tr>
         <tr><td>Embedding</td><td>Cross-origin iframe in the Astro site, <code>postMessage</code> resize bridge</td></tr>
         <tr><td>Runtime</td><td>Vanilla JS, Web Audio API, Canvas 2D API</td></tr>
         <tr><td>Fonts</td><td>IBM Plex Mono + DM Serif Display via Google Fonts</td></tr>
@@ -427,45 +427,45 @@ ol.cs-list li::before {
       <span class="pill">Autocorrelation</span>
     </div>
 
-    <h3>2.1 &mdash; Decoding</h3>
+    <h3>2.1 &middot; Decoding</h3>
     <p>The raw <code>ArrayBuffer</code> is decoded using the Web Audio API's <code>decodeAudioData()</code>, which handles MP3, WAV, FLAC, OGG, AAC, and M4A natively in the browser. The decoded <code>AudioBuffer</code> is immediately mixed to mono by averaging the left and right channel sample arrays. Mono mixing halves the processing load and is standard practice for onset detection, which does not benefit from stereo information.</p>
 
-    <h3>2.2 &mdash; Waveform downsampling</h3>
+    <h3>2.2 &middot; Waveform downsampling</h3>
     <p>The mono sample array (typically 4&ndash;8 million samples for a 90-second track at 44.1kHz) is downsampled to 1,200 min/max pairs for display. Each pair captures the peak positive and peak negative sample within a window, producing the filled waveform shape characteristic of audio editors. This representation is visual only and plays no part in the analysis.</p>
 
-    <h3>2.3 &mdash; Spectral flux onset detection</h3>
+    <h3>2.3 &middot; Spectral flux onset detection</h3>
     <p>Onset detection is the core of the analysis. The algorithm steps through the audio in overlapping frames:</p>
     <table class="data-table">
       <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
       <tbody>
         <tr><td>Frame size</td><td>2048 samples</td></tr>
         <tr><td>Hop size</td><td>512 samples (~11.6ms at 44.1kHz)</td></tr>
-        <tr><td>Window function</td><td>Hanning &mdash; reduces spectral leakage at frame edges</td></tr>
+        <tr><td>Window function</td><td>Hanning: reduces spectral leakage at frame edges</td></tr>
         <tr><td>Transform</td><td>Cooley&ndash;Tukey radix-2 FFT, implemented from scratch in JS</td></tr>
       </tbody>
     </table>
     <p>For each frame the algorithm computes the positive difference between the current magnitude spectrum and the previous frame's spectrum: this is spectral flux. A spike in flux indicates new frequency energy entering the signal: a drum hit, a chord onset, a melodic phrase beginning. The flux values form a continuous time series across the track duration.</p>
 
-    <h3>2.4 &mdash; Peak picking and tiering</h3>
+    <h3>2.4 &middot; Peak picking and tiering</h3>
     <p>The flux array is lightly smoothed and local maxima above the 85th percentile are identified, with a minimum distance constraint between picks to prevent double-triggering. Peaks are tiered by strength relative to the global maximum:</p>
     <table class="data-table">
       <thead>
         <tr><th class="tier-hd">Tier</th><th class="tier-hd">Threshold</th><th class="tier-hd">Use</th></tr>
       </thead>
       <tbody>
-        <tr><td class="tier-1">1 &mdash; Major</td><td>&ge;72% of max</td><td>Strongest hits. Key poses, cuts, major transitions.</td></tr>
-        <tr><td class="tier-2">2 &mdash; Mid</td><td>48&ndash;72%</td><td>Mid-level onsets. Secondary accents, phrase markers.</td></tr>
-        <tr><td class="tier-3">3 &mdash; Minor</td><td>&lt;48%</td><td>Subtle onsets. Texture, micro-timing, detail passes.</td></tr>
+        <tr><td class="tier-1">1: Major</td><td>&ge;72% of max</td><td>Strongest hits. Key poses, cuts, major transitions.</td></tr>
+        <tr><td class="tier-2">2: Mid</td><td>48&ndash;72%</td><td>Mid-level onsets. Secondary accents, phrase markers.</td></tr>
+        <tr><td class="tier-3">3: Minor</td><td>&lt;48%</td><td>Subtle onsets. Texture, micro-timing, detail passes.</td></tr>
       </tbody>
     </table>
 
-    <h3>2.5 &mdash; RMS envelope</h3>
+    <h3>2.5 &middot; RMS envelope</h3>
     <p>Root mean square energy is computed per frame, giving a measure of perceived loudness over time. The RMS array is used for waveform background shading and for structural segmentation.</p>
 
-    <h3>2.6 &mdash; Structural segmentation</h3>
+    <h3>2.6 &middot; Structural segmentation</h3>
     <p>The RMS envelope is heavily smoothed over a two-second window and local minima are identified. These represent moments where the music breathes between phrases. The five deepest minima become section boundaries, dividing the track into up to six structural sections. This is a heuristic: it works well for music with clear phrase structure and less well for continuous or through-composed material.</p>
 
-    <h3>2.7 &mdash; Tempo estimation</h3>
+    <h3>2.7 &middot; Tempo estimation</h3>
     <p>Autocorrelation is performed on the spectral flux signal across a range of lags corresponding to 50&ndash;240 BPM. The lag with the highest correlation coefficient corresponds to the beat period, folded into a musically sensible range (60&ndash;200 BPM). This estimate drives the beat grid export and is approximate. For tracks with irregular pulse the grid should be treated as a starting reference.</p>
   </section>
 
@@ -526,12 +526,12 @@ ol.cs-list li::before {
     <table class="data-table">
       <thead><tr><th>Token</th><th>Hex</th><th>Role</th></tr></thead>
       <tbody>
-        <tr><td><code>--bg</code></td><td>#141414</td><td>Page background &mdash; matches Pok&eacute;dex viewer canvas</td></tr>
-        <tr><td><code>--accent</code></td><td style="color:var(--accent)">#76c17d</td><td>Primary / Tier 1 &mdash; Pok&eacute;dex green</td></tr>
-        <tr><td><code>--accent2</code></td><td style="color:var(--accent2)">#b9b0ff</td><td>Tier 2 &mdash; periwinkle</td></tr>
-        <tr><td><code>--accent3</code></td><td style="color:var(--accent3)">#e8b86d</td><td>Tier 3 / beat grid &mdash; warm amber</td></tr>
-        <tr><td><code>--text</code></td><td>#e1e1e1</td><td>Primary text &mdash; 12:1 contrast on --bg (WCAG AAA)</td></tr>
-        <tr><td><code>--muted</code></td><td>#888888</td><td>Secondary text &mdash; 4.6:1 contrast (WCAG AA)</td></tr>
+        <tr><td><code>--bg</code></td><td>#141414</td><td>Page background: matches Pok&eacute;dex viewer canvas</td></tr>
+        <tr><td><code>--accent</code></td><td style="color:var(--accent)">#76c17d</td><td>Primary / Tier 1: Pok&eacute;dex green</td></tr>
+        <tr><td><code>--accent2</code></td><td style="color:var(--accent2)">#b9b0ff</td><td>Tier 2: periwinkle</td></tr>
+        <tr><td><code>--accent3</code></td><td style="color:var(--accent3)">#e8b86d</td><td>Tier 3 / beat grid: warm amber</td></tr>
+        <tr><td><code>--text</code></td><td>#e1e1e1</td><td>Primary text: 12:1 contrast on --bg (WCAG AAA)</td></tr>
+        <tr><td><code>--muted</code></td><td>#888888</td><td>Secondary text: 4.6:1 contrast (WCAG AA)</td></tr>
       </tbody>
     </table>
 
@@ -557,8 +557,8 @@ ol.cs-list li::before {
 
   <!-- ── FOOTER ── -->
   <footer class="cs-footer">
-    <p>Studio David Preli &mdash; <a href="https://davidpreli.com">davidpreli.com</a></p>
-    <p>Built for <a href="./dream-team-case-study.html">The Dream Team</a> &mdash; 2026</p>
+    <p>Studio David Preli &middot; <a href="https://davidpreli.com">davidpreli.com</a></p>
+    <p>Built for <a href="./dream-team-case-study.html">The Dream Team</a> &middot; 2026</p>
   </footer>
 
 </div>
